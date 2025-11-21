@@ -1,1 +1,5 @@
 /target
+
+# input files
+input.vtk
+input.mesh
