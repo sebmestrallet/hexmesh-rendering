@@ -1,6 +1,6 @@
-use std::f32::MIN;
 use std::fs;
 use std::ops::{Div, Sub};
+use std::collections::HashMap;
 
 const INPUT_FILE: &str = "input.mesh";
 
@@ -106,6 +106,17 @@ static HEX_CORNER_SPLITING: [[usize; 4]; 8] = [
     [7,4,3,6]
 ];
 
+static HEX_FACET_SPLITTING: [[usize; 5]; 6] = [
+    // clockwise order when facet seen from outside the cell
+    // facet index, then its 4 ordered vertices
+    [0,0,1,2,3], // front
+    [1,3,2,6,7], // right
+    [2,7,6,5,4], // back
+    [3,4,5,1,0], // left
+    [4,4,0,3,7], // bottom
+    [5,1,5,6,2], // tom
+];
+
 struct Hexahedra {
     vertices: [usize; 8], // 8 indices, for 8 vertices
 }
@@ -119,19 +130,19 @@ impl Hexahedra {
 struct HexMesh {
     points: Vec<Vec3>,
     cells: Vec<Hexahedra>,
-    scaled_jacobians: Option<Vec<f32>>
+    scaled_jacobians: Option<Vec<f32>>,
+    cell_adjacency: Vec<[Option<(usize,usize)>; 6]> // for each cell, for each of each facet, either a cell index & a local facet index, or None
 }
 
 impl HexMesh {
     pub fn new() -> HexMesh {
         let points = Vec::new();
         let cells = Vec::new();
-        HexMesh { points: points, cells: cells, scaled_jacobians: None }
+        HexMesh { points: points, cells: cells, scaled_jacobians: None, cell_adjacency: Vec::new() }
     }
 
-    fn compute_scaled_jacobian(&self) {
-        let mut all_values: Vec<f32> = Vec::new();
-        all_values.resize(self.cells.len(),0.0); // fill with 0.0, self.cells.len() times
+    fn compute_scaled_jacobian(&mut self) {
+        self.scaled_jacobians = Some(vec![0.0f32; self.cells.len()]); // fill with 0.0, self.cells.len() times
         for hex_index in 0..self.cells.len() { // for each cell (each hexahedron)
             let mut scaled_jacobian: f32 = 1.0;
             for hex_corner in 0..8 { // for each of the 8 vertices of the current hexahedron
@@ -149,11 +160,72 @@ impl HexMesh {
                 let n3: Vec3 = (v[3] - v[0]).normalized();
                 scaled_jacobian = f32::min(scaled_jacobian,dot(&n3,&cross(&n1,&n2)));
             }
-            *all_values.get_mut(hex_index).unwrap() = scaled_jacobian; // update vector
+            *self.scaled_jacobians.as_mut().unwrap().get_mut(hex_index).unwrap() = scaled_jacobian; // update vector
         }
     }
-}
 
+    fn compute_cell_adjacency(&mut self) {
+        let mut uniques_quads: HashMap<[usize; 4],Vec<(usize,usize)>> = HashMap::new();
+        let mut v0: usize = 0;
+        let mut v1: usize = 0;
+        let mut v2: usize = 0;
+        let mut v3: usize = 0;
+        let mut four_vertices_of_the_facet: [usize; 4] = [0; 4];
+        for hex_index in 0..self.cells.len() { // for each cell (each hexahedron)
+            let current_hex: &Hexahedra = self.cells.get(hex_index).unwrap();
+            for facet_index in 0..6 { // for each facet of the current cell
+                v0 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][1]).unwrap();
+                v1 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][2]).unwrap();
+                v2 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][3]).unwrap();
+                v3 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][4]).unwrap();
+                four_vertices_of_the_facet = [v0, v1, v2, v3];
+                four_vertices_of_the_facet.sort();
+                let existing_value: Option<&mut Vec<(usize,usize)>> = uniques_quads.get_mut(&four_vertices_of_the_facet);
+                if let Some(value) = existing_value {
+                    // this unique facet already exists in the hashmap
+                    value.push((hex_index,facet_index));
+                }
+                else {
+                    // this unique facet doesn't already exists in the hashmap
+                    uniques_quads.insert(four_vertices_of_the_facet,vec![(hex_index,facet_index)]);
+                }
+            }
+        }
+
+        // parse again all facets of all cells
+        self.cell_adjacency.clear();
+        self.cell_adjacency.reserve(self.cells.len()); // preallocation
+        for hex_index in 0..self.cells.len() {
+            let current_hex: &Hexahedra = self.cells.get(hex_index).unwrap();
+            let mut adjacent_cells: [Option<(usize,usize)>; 6] = [None,None,None,None,None,None];
+            for facet_index in 0..6 {
+                v0 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][1]).unwrap();
+                v1 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][2]).unwrap();
+                v2 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][3]).unwrap();
+                v3 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][4]).unwrap();
+                four_vertices_of_the_facet = [v0, v1, v2, v3];
+                four_vertices_of_the_facet.sort();
+                let existing_value: Option<&Vec<(usize,usize)>> = uniques_quads.get(&four_vertices_of_the_facet);
+                let value = existing_value.unwrap(); // assert the facet is in the hashmap
+                assert!(value.len() == 1 || value.len() == 2); // each unique facet is linked to 1 or 2 oriented facets
+                // if value.len() == 1, nothing to do, adjacency is None at initialization
+                if value.len() == 2 {
+                    if value.get(0).unwrap().0 == hex_index {
+                        adjacent_cells[facet_index] = Some(*value.get(1).unwrap());
+                    }
+                    else {
+                        adjacent_cells[facet_index] = Some(*value.get(0).unwrap());
+                    }
+                }
+            }
+            self.cell_adjacency.push(adjacent_cells);
+        }
+        println!("cell_adjacency.len() = {}",self.cell_adjacency.len());
+        println!("{:?}",self.cell_adjacency.last());
+
+        println!("End of compute_cell_adjacency");
+    }
+}
 
 enum State {
     Header,
@@ -240,7 +312,15 @@ fn main() {
         }
         println!("mesh.points.len() = {}", mesh.points.len());
         println!("mesh.cells.len() = {}", mesh.cells.len());
+
         mesh.compute_scaled_jacobian();
         println!("Scaled Jacobians computed");
+
+        mesh.compute_cell_adjacency();
+
+        // extract surface of the mesh
+    }
+    else {
+        panic!("Unable to open file '{INPUT_FILE}'");
     }
 }
