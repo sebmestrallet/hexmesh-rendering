@@ -2,70 +2,53 @@ use std::fs;
 use std::collections::HashMap;
 use crate::vector::*;
 
-// MEDIT .mesh format for hex-meshes
-// /!\ in hexahedra definitions, vertex indices are 1-based
-// ---
-// MeshVersionFormatted 2
-// Dimension 3
-
-// Vertices
-// <nb>
-// x y z 1
-// ...
-//
-// Hexahedra
-// <nb>
-// v0 v1 v2 v3 v4 v5 v6 v7 1
-// 
-// End
-
-// https://github.com/LIHPC-Computational-Geometry/validity-first-polycube-labeling/blob/main/include/geometry_hexahedra.h
-// MEDIT convention (.mesh files)
-//        5-------6
-//       /|      /|
-//      / |     / |
-//     1-------2  |
-//     |  4----|--7
-//     | /     | /
-//     |/      |/
-//     0-------3
-pub static HEX_CORNER_SPLITING: [[usize; 4]; 8] = [
-    // corner index, then its 3 ordered neighbors
-    [0,3,4,1],
-    [1,5,2,0],
-    [2,1,6,3],
-    [3,7,0,2],
-    [4,0,7,5],
-    [5,6,1,4],
-    [6,2,5,7],
-    [7,4,3,6]
-];
-
-pub static HEX_FACET_SPLITTING: [[usize; 5]; 6] = [
-    // facet index, then its 4 ordered vertices
-    // facets ordering: 
-    // vertices ordering: clockwise order when facet seen from outside the cell
-    [0,0,1,2,3], // front
-    [1,3,2,6,7], // right
-    [2,7,6,5,4], // back
-    [3,4,5,1,0], // left
-    [4,4,0,3,7], // bottom
-    [5,1,5,6,2], // tom
-];
-
-pub struct Hexahedra {
+pub struct Hexahedron {
     pub vertices: [usize; 8], // 8 indices, for 8 vertices
 }
 
-impl Hexahedra {
-    pub fn new(vertices: [usize; 8]) -> Hexahedra {
-        Hexahedra { vertices: vertices }
+impl Hexahedron {
+    pub fn new(vertices: [usize; 8]) -> Hexahedron {
+        Hexahedron { vertices: vertices }
     }
+
+    pub const CORNER_SPLITING: [[usize; 4]; 8] = [
+        // corner index, then its 3 ordered neighbors
+        // MEDIT convention (.mesh files)
+        // https://github.com/LIHPC-Computational-Geometry/validity-first-polycube-labeling/blob/main/include/geometry_hexahedra.h
+        //        5-------6
+        //       /|      /|
+        //      / |     / |
+        //     1-------2  |
+        //     |  4----|--7
+        //     | /     | /
+        //     |/      |/
+        //     0-------3
+        [0,3,4,1],
+        [1,5,2,0],
+        [2,1,6,3],
+        [3,7,0,2],
+        [4,0,7,5],
+        [5,6,1,4],
+        [6,2,5,7],
+        [7,4,3,6]
+    ];
+
+    pub const FACET_SPLITTING: [[usize; 5]; 6] = [
+        // facet index, then its 4 ordered vertices
+        // facets ordering: no particular order
+        // vertices ordering: clockwise order when facet seen from outside the cell
+        [0,0,1,2,3], // front
+        [1,3,2,6,7], // right
+        [2,7,6,5,4], // back
+        [3,4,5,1,0], // left
+        [4,4,0,3,7], // bottom
+        [5,1,5,6,2], // tom
+    ];
 }
 
 pub struct HexMesh {
     pub points: Vec<Vec3>,
-    pub cells: Vec<Hexahedra>,
+    pub cells: Vec<Hexahedron>,
     pub scaled_jacobians: Option<Vec<f32>>,
     pub cell_adjacency: Vec<[Option<(usize,usize)>; 6]> // for each cell, for each of each facet, either a cell index & a local facet index, or None
 }
@@ -78,6 +61,23 @@ impl HexMesh {
     }
 
     pub fn from_medit(file_name: &str) -> HexMesh {
+        // MEDIT .mesh format for hex-meshes
+        // /!\ in hexahedra definitions, vertex indices are 1-based
+        // ---
+        // MeshVersionFormatted 2
+        // Dimension 3
+        //
+        // Vertices
+        // <nb>
+        // <x> <y> <z> 1
+        // ...
+        //
+        // Hexahedra
+        // <nb>
+        // <v0> <v1> <v2> <v3> <v4> <v5> <v6> <v7> 1
+        // ...
+        // End
+
         let mut points = Vec::new();
         let mut cells = Vec::new();
 
@@ -154,7 +154,7 @@ impl HexMesh {
                             let v5: usize = parts[5].to_string().parse::<usize>().unwrap();
                             let v6: usize = parts[6].to_string().parse::<usize>().unwrap();
                             let v7: usize = parts[7].to_string().parse::<usize>().unwrap();
-                            cells.push(Hexahedra::new([v0,v1,v2,v3,v4,v5,v6,v7]));
+                            cells.push(Hexahedron::new([v0,v1,v2,v3,v4,v5,v6,v7]));
                         }
                         continue;
                     },
@@ -179,7 +179,7 @@ impl HexMesh {
             for hex_corner in 0..8 { // for each of the 8 vertices of the current hexahedron
                 let mut v: [Vec3; 4] = [Vec3::ZERO, Vec3::ZERO, Vec3::ZERO, Vec3::ZERO];
                 for i in 0..4 { // [0] will be the current vertex, and [1:3] its 3 neighboring corners
-                    let which_corner = HEX_CORNER_SPLITING[hex_corner][i];
+                    let which_corner = Hexahedron::CORNER_SPLITING[hex_corner][i];
                     let vertex_index = self.cells.get(hex_index).unwrap().vertices[which_corner];
                     v[i] = *self.points.get(vertex_index-1).unwrap_or_else(|| {
                             panic!("Cannot access `points` vec at {vertex_index}");
@@ -203,12 +203,12 @@ impl HexMesh {
         let mut v3: usize;
         let mut four_vertices_of_the_facet: [usize; 4];
         for hex_index in 0..self.cells.len() { // for each cell (each hexahedron)
-            let current_hex: &Hexahedra = self.cells.get(hex_index).unwrap();
+            let current_hex: &Hexahedron = self.cells.get(hex_index).unwrap();
             for facet_index in 0..6 { // for each facet of the current cell
-                v0 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][1]).unwrap();
-                v1 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][2]).unwrap();
-                v2 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][3]).unwrap();
-                v3 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][4]).unwrap();
+                v0 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][1]).unwrap();
+                v1 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][2]).unwrap();
+                v2 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][3]).unwrap();
+                v3 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][4]).unwrap();
                 four_vertices_of_the_facet = [v0, v1, v2, v3];
                 four_vertices_of_the_facet.sort();
                 let existing_value: Option<&mut Vec<(usize,usize)>> = uniques_quads.get_mut(&four_vertices_of_the_facet);
@@ -227,13 +227,13 @@ impl HexMesh {
         self.cell_adjacency.clear();
         self.cell_adjacency.reserve(self.cells.len()); // preallocation
         for hex_index in 0..self.cells.len() {
-            let current_hex: &Hexahedra = self.cells.get(hex_index).unwrap();
+            let current_hex: &Hexahedron = self.cells.get(hex_index).unwrap();
             let mut adjacent_cells: [Option<(usize,usize)>; 6] = [None,None,None,None,None,None];
             for facet_index in 0..6 {
-                v0 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][1]).unwrap();
-                v1 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][2]).unwrap();
-                v2 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][3]).unwrap();
-                v3 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][4]).unwrap();
+                v0 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][1]).unwrap();
+                v1 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][2]).unwrap();
+                v2 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][3]).unwrap();
+                v3 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][4]).unwrap();
                 four_vertices_of_the_facet = [v0, v1, v2, v3];
                 four_vertices_of_the_facet.sort();
                 let existing_value: Option<&Vec<(usize,usize)>> = uniques_quads.get(&four_vertices_of_the_facet);
@@ -268,16 +268,16 @@ impl HexMesh {
         let mut v2: usize;
         let mut v3: usize;
         for hex_index in 0..self.cells.len() {
-            let current_hex: &Hexahedra = self.cells.get(hex_index).unwrap();
+            let current_hex: &Hexahedron = self.cells.get(hex_index).unwrap();
             for facet_index in 0..6 {
                 let at_other_side = self.cell_adjacency.get(hex_index).unwrap().get(facet_index).unwrap();
                 if *at_other_side == None {
                     // this facet (quad) is on the surface
                     // create 2 triangles, [v0,v1,v2] and [v0,v2,v3]
-                    v0 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][1]).unwrap();
-                    v1 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][2]).unwrap();
-                    v2 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][3]).unwrap();
-                    v3 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][4]).unwrap();
+                    v0 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][1]).unwrap();
+                    v1 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][2]).unwrap();
+                    v2 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][3]).unwrap();
+                    v3 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][4]).unwrap();
                     triangles.push((v0,v1,v2));
                     triangles.push((v0,v2,v3));
                 }
