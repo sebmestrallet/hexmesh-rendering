@@ -1,5 +1,5 @@
 use std::fs;
-use std::collections::HashMap;
+use std::collections::{HashSet,HashMap};
 use crate::vector::*;
 
 pub struct Hexahedron {
@@ -263,10 +263,15 @@ impl HexMesh {
         }
         // extract surface of the mesh
         let mut triangles: Vec<(usize,usize,usize)> = Vec::new();
+        let mut unique_quad_edges: HashSet<[usize; 2]> = HashSet::new();
         let mut v0: usize;
         let mut v1: usize;
         let mut v2: usize;
         let mut v3: usize;
+        let mut e0: [usize; 2]; // edge between v0 and v1;
+        let mut e1: [usize; 2]; // edge between v1 and v2;
+        let mut e2: [usize; 2]; // edge between v2 and v3;
+        let mut e3: [usize; 2]; // edge between v3 and v0;
         for hex_index in 0..self.cells.len() {
             let current_hex: &Hexahedron = self.cells.get(hex_index).unwrap();
             for facet_index in 0..6 {
@@ -280,6 +285,18 @@ impl HexMesh {
                     v3 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][4]).unwrap();
                     triangles.push((v0,v1,v2));
                     triangles.push((v0,v2,v3));
+                    e0 = [v0,v1];
+                    e1 = [v1,v2];
+                    e2 = [v2,v3];
+                    e3 = [v3,v0];
+                    e0.sort();
+                    e1.sort();
+                    e2.sort();
+                    e3.sort();
+                    unique_quad_edges.insert(e0);
+                    unique_quad_edges.insert(e1);
+                    unique_quad_edges.insert(e2);
+                    unique_quad_edges.insert(e3);
                 }
             }
         }
