@@ -1,11 +1,12 @@
 use crate::hexmesh::*;
 use crate::wavefront::*;
-use rust_mesh::*; // lib.rs
+use crate::wgpu::*;
 
 mod matrix;
 mod vector;
 mod hexmesh;
 mod wavefront;
+mod wgpu;
 
 static INPUT_FILE: &str = "input.mesh";
 
