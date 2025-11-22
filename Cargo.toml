@@ -5,10 +5,15 @@ edition = "2024"
 
 [dependencies]
 # https://sotrh.github.io/learn-wgpu/beginner/tutorial1-window/
-anyhow = "1.0"
+anyhow = "1.0" # https://sotrh.github.io/learn-wgpu/beginner/tutorial5-textures/#cleaning-things-up
 winit = { version = "0.30", features = ["android-native-activity"] }
 env_logger = "0.10"
 log = "0.4"
 wgpu = "27.0.0"
 pollster = "0.3"
 bytemuck = { version = "1.24", features = [ "derive" ] } # https://sotrh.github.io/learn-wgpu/beginner/tutorial4-buffer/#the-vertex-buffer
+
+[dependencies.image]
+version = "0.24"
+default-features = false
+features = ["png", "jpeg"]

@@ -2,10 +2,10 @@ use crate::hexmesh::*;
 use crate::wavefront::*;
 use rust_mesh::*; // lib.rs
 
-pub mod matrix;
-pub mod vector;
-pub mod hexmesh;
-pub mod wavefront;
+mod matrix;
+mod vector;
+mod hexmesh;
+mod wavefront;
 
 static INPUT_FILE: &str = "input.mesh";
 
