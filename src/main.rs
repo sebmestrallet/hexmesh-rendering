@@ -1,6 +1,8 @@
 use std::fs;
+use std::fs::File;
 use std::ops::{Div, Sub};
 use std::collections::HashMap;
+use std::io::prelude::*;
 
 const INPUT_FILE: &str = "input.mesh";
 
@@ -333,14 +335,33 @@ fn main() {
                     // create 2 triangles, [v0,v1,v2] and [v0,v2,v3]
                     v0 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][1]).unwrap();
                     v1 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][2]).unwrap();
-                    v2 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][2]).unwrap();
-                    v3 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][3]).unwrap();
+                    v2 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][3]).unwrap();
+                    v3 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][4]).unwrap();
                     triangles.push((v0,v1,v2));
                     triangles.push((v0,v2,v3));
                 }
             }
         }
         println!("Surface mesh: {} triangles",triangles.len());
+
+        // write as .obj
+        // ---
+        // v <x> <y> <z>
+        // ...
+        // usemtl Material_0
+        // f <v0> <v1> <v2>
+        let mut file = File::create("surface.obj").unwrap();
+        for vertex_index in 0..mesh.points.len() {
+            let current_vertex = mesh.points.get(vertex_index).unwrap();
+            let _ = file.write_all(format!("v {} {} {}\n",current_vertex.x, current_vertex.y, current_vertex.z).as_bytes());
+        }
+        let _ = file.write_all(b"usemtl Material_0\n");
+        for triangle_index in 0..triangles.len() {
+            let current_triangle = triangles.get(triangle_index).unwrap();
+            let _ = file.write_all(format!("f {} {} {}\n",current_triangle.0, current_triangle.1, current_triangle.2).as_bytes());
+        }
+        println!("surface.obj written");
+        
     }
     else {
         panic!("Unable to open file '{INPUT_FILE}'");

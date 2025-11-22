@@ -3,3 +3,6 @@
 # input files
 input.vtk
 input.mesh
+
+# output files
+surface.obj
