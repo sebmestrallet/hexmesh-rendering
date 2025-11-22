@@ -319,6 +319,28 @@ fn main() {
         mesh.compute_cell_adjacency();
 
         // extract surface of the mesh
+        let mut triangles: Vec<(usize,usize,usize)> = Vec::new();
+        let mut v0: usize = 0;
+        let mut v1: usize = 0;
+        let mut v2: usize = 0;
+        let mut v3: usize = 0;
+        for hex_index in 0..mesh.cells.len() {
+            let current_hex: &Hexahedra = mesh.cells.get(hex_index).unwrap();
+            for facet_index in 0..6 {
+                let at_other_side = mesh.cell_adjacency.get(hex_index).unwrap().get(facet_index).unwrap();
+                if *at_other_side == None {
+                    // this facet (quad) is on the surface
+                    // create 2 triangles, [v0,v1,v2] and [v0,v2,v3]
+                    v0 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][1]).unwrap();
+                    v1 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][2]).unwrap();
+                    v2 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][2]).unwrap();
+                    v3 = *current_hex.vertices.get(HEX_FACET_SPLITTING[facet_index][3]).unwrap();
+                    triangles.push((v0,v1,v2));
+                    triangles.push((v0,v2,v3));
+                }
+            }
+        }
+        println!("Surface mesh: {} triangles",triangles.len());
     }
     else {
         panic!("Unable to open file '{INPUT_FILE}'");
