@@ -14,6 +14,7 @@ use bevy::{
     mesh::Indices,
     color::palettes::basic::SILVER,
 };
+use bevy_panorbit_camera::{PanOrbitCamera,PanOrbitCameraPlugin};
 
 mod matrix;
 mod vector;
@@ -66,9 +67,9 @@ fn startup(
         .insert(Wireframe);
 
     commands.spawn((
-        Camera3d::default(),
         Transform::from_xyz(0.0, 7., 14.0)
             .looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
+        PanOrbitCamera::default(),
     ));
 }
 
@@ -95,7 +96,8 @@ fn main() {
         .insert_resource(ClearColor(Color::WHITE))
         .add_plugins((
             DefaultPlugins,
-            WireframePlugin::default()
+            WireframePlugin::default(),
+            PanOrbitCameraPlugin
         ))
         .add_systems(Startup, startup)
         .add_systems(
