@@ -4,17 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# https://sotrh.github.io/learn-wgpu/beginner/tutorial1-window/
-anyhow = "1.0" # https://sotrh.github.io/learn-wgpu/beginner/tutorial5-textures/#cleaning-things-up
-winit = { version = "0.30", features = ["android-native-activity"] }
-env_logger = "0.10"
-log = "0.4"
-wgpu = "27.0.0"
-pollster = "0.3"
-bytemuck = { version = "1.24", features = [ "derive" ] } # https://sotrh.github.io/learn-wgpu/beginner/tutorial4-buffer/#the-vertex-buffer
-cgmath = "0.18" # https://sotrh.github.io/learn-wgpu/beginner/tutorial6-uniforms/#a-perspective-camera
+bevy = { version = "0.17.3", features = ["dynamic_linking"] }
 
-[dependencies.image]
-version = "0.24"
-default-features = false
-features = ["png", "jpeg"]
+# Enable a small amount of optimization in the dev profile.
+[profile.dev]
+opt-level = 1
+
+# Enable a large amount of optimization in the dev profile for dependencies.
+[profile.dev.package."*"]
+opt-level = 3
