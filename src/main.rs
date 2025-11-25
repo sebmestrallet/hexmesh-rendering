@@ -2,7 +2,7 @@ use crate::hexmesh::*;
 use crate::wavefront::*;
 use bevy::{
     math::Vec3Swizzles,
-    pbr::wireframe::{Wireframe, WireframePlugin},
+    pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
     prelude::*,
     asset::RenderAssetUsages,
     render::{
@@ -72,6 +72,15 @@ fn startup(
     ));
 }
 
+fn toggle_wireframe(
+    mut wireframe_config: ResMut<WireframeConfig>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    if keyboard.just_pressed(KeyCode::Space) {
+        wireframe_config.global = !wireframe_config.global;
+    }
+}
+
 fn main() {
     // let mut mesh: HexMesh = HexMesh::from_medit(INPUT_FILE);
     
@@ -84,7 +93,17 @@ fn main() {
 
     App::new()
         .insert_resource(ClearColor(Color::WHITE))
-        .add_plugins(DefaultPlugins)
+        .add_plugins((
+            DefaultPlugins,
+            WireframePlugin::default()
+        ))
         .add_systems(Startup, startup)
+        .add_systems(
+            Update,
+            (
+                toggle_wireframe,
+            ),
+        )
+
         .run();
 }
