@@ -106,7 +106,7 @@ fn startup(
     mesh.compute_scaled_jacobian();
     println!("Scaled Jacobians computed");
 
-    let mut trianglemesh = mesh.triangulate_surface();
+    let (mut trianglemesh,per_triangle_scaled_jacobian): (TriangleMesh, Vec<f32>) = mesh.triangulate_surface();
     trianglemesh.sanity_check();
 
     trianglemesh.remove_isolated_vertices();

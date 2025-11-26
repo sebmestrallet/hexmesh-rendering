@@ -258,15 +258,20 @@ impl HexMesh {
         println!("End of compute_cell_adjacency");
     }
 
-    pub fn triangulate_surface(&mut self) -> TriangleMesh {
+    pub fn triangulate_surface(&mut self) -> (TriangleMesh,Vec<f32>) {
+        if self.scaled_jacobians == None {
+            self.compute_scaled_jacobian();
+        }
         if self.cell_adjacency.is_empty() {
             self.compute_cell_adjacency();
         }
+        let scaled_jacobians = self.scaled_jacobians.as_ref().unwrap();
         // extract surface of the mesh
         let mut trianglemesh = TriangleMesh::new();
         assert!(trianglemesh.positions.len() == 0);
         assert!(trianglemesh.indices.len() == 0);
         assert!(trianglemesh.edges.len() == 0);
+        let mut per_triangle_scaled_jacobian: Vec<f32> = Vec::new();
         let mut v0: u32;
         let mut v1: u32;
         let mut v2: u32;
@@ -319,6 +324,10 @@ impl HexMesh {
                     trianglemesh.indices.push(v3);
                     trianglemesh.indices.push(v2);
 
+                    per_triangle_scaled_jacobian.reserve(2); // 2 new per-triangle scaled jacobian
+                    per_triangle_scaled_jacobian.push(*scaled_jacobians.get(hex_index).unwrap());
+                    per_triangle_scaled_jacobian.push(*scaled_jacobians.get(hex_index).unwrap());
+
                     // assemble oriented edges
                     e0 = [v0,v1];
                     e1 = [v1,v2];
@@ -341,6 +350,6 @@ impl HexMesh {
         assert!(!trianglemesh.positions.is_empty());
         assert!(trianglemesh.indices.len() % 3 == 0);
         println!("End of triangulate_surface()");
-        trianglemesh
+        (trianglemesh,per_triangle_scaled_jacobian)
     }
 }
