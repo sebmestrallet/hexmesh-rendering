@@ -117,6 +117,8 @@ fn startup(
     let bounding_box = trianglemesh.bounding_box();
     println!("Bounding box {:?}",bounding_box);
 
+    trianglemesh.duplicate_vertices(&per_triangle_scaled_jacobian);
+
     commands
         .spawn((
             Mesh3d(meshes.add(create_mesh_from(trianglemesh))),

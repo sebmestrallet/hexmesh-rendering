@@ -147,4 +147,71 @@ impl TriangleMesh {
         }
         min_max_xyz
     }
+
+    pub fn duplicate_vertices(&mut self, per_triangle_scaled_jacobian: &Vec<f32>) {
+        // no longer share vertices between triangles
+        // each triangle will have its 3 own vertices
+        // to have per-triangle uv coordinates instead of per-vertex uv coordinates
+        assert!(self.indices.len() % 3 == 0);
+        let nb_triangles = self.indices.len()/3;
+        let mut new_vertices: Vec<[f32;3]> = Vec::with_capacity(nb_triangles*3);
+        self.uv.clear();
+        self.uv.reserve(nb_triangles*3);
+        let mut old_to_new_indices: HashMap<u32,u32> = HashMap::new();
+        let mut scaled_jacobian: f32;
+        
+        for triangle_index in 0..nb_triangles {
+            let v0_old_ref = *self.indices.get(triangle_index*3+0).unwrap();
+            let v1_old_ref = *self.indices.get(triangle_index*3+1).unwrap();
+            let v2_old_ref = *self.indices.get(triangle_index*3+2).unwrap();
+
+            let index_of_first_vertex_of_this_triangle = new_vertices.len() as u32;
+
+            new_vertices.push(
+                *self.positions.get(v0_old_ref as usize).unwrap()
+            );
+            new_vertices.push(
+                *self.positions.get(v1_old_ref as usize).unwrap()
+            );
+            new_vertices.push(
+                *self.positions.get(v2_old_ref as usize).unwrap()
+            );
+
+            scaled_jacobian = *per_triangle_scaled_jacobian.get(triangle_index).unwrap();
+            self.uv.push([
+                1.0-scaled_jacobian,
+                0.0
+            ]);
+            self.uv.push([
+                1.0-scaled_jacobian,
+                0.0
+            ]);
+            self.uv.push([
+                1.0-scaled_jacobian,
+                0.0
+            ]);
+
+            old_to_new_indices.insert(v0_old_ref,index_of_first_vertex_of_this_triangle+0);
+            old_to_new_indices.insert(v1_old_ref,index_of_first_vertex_of_this_triangle+1);
+            old_to_new_indices.insert(v2_old_ref,index_of_first_vertex_of_this_triangle+2);
+
+            *self.indices.get_mut(triangle_index*3+0).unwrap() = index_of_first_vertex_of_this_triangle+0;
+            *self.indices.get_mut(triangle_index*3+1).unwrap() = index_of_first_vertex_of_this_triangle+1;
+            *self.indices.get_mut(triangle_index*3+2).unwrap() = index_of_first_vertex_of_this_triangle+2;
+        }
+        self.positions = new_vertices;
+        // update edges, the referenced vertices no longer have the same index
+        let mut new_edges: HashSet<[u32; 2]> = HashSet::new();
+        let mut new_edge: [u32; 2];
+        for edge in self.edges.iter() {
+            new_edge = [
+                *old_to_new_indices.get(&edge[0]).unwrap(),
+                *old_to_new_indices.get(&edge[1]).unwrap(),
+            ];
+            new_edges.insert(new_edge);
+        }
+        self.edges = new_edges;
+        assert!(self.positions.len() == nb_triangles*3);
+        assert!(self.uv.len() == nb_triangles*3);
+    }
 }
