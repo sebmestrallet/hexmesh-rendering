@@ -112,20 +112,36 @@ fn startup(
     trianglemesh.remove_isolated_vertices();
     trianglemesh.sanity_check();
 
-    trianglemesh.write_obj("surface.obj");
+    // trianglemesh.write_obj("surface.obj");
+
+    let bounding_box = trianglemesh.bounding_box();
+    println!("Bounding box {:?}",bounding_box);
 
     commands
         .spawn((
             Mesh3d(meshes.add(create_mesh_from(trianglemesh))),
             MeshMaterial3d(material_handle)
         ))
+        .insert(Transform::from_xyz(
+                -(bounding_box[0].1-bounding_box[0].0) / 2.0,
+                -(bounding_box[1].1-bounding_box[1].0) / 2.0,
+                -(bounding_box[2].1-bounding_box[2].0) / 2.0,
+            ))
         .insert(Wireframe);
 
-    commands.spawn((
-        Transform::from_xyz(0.0, 7., 14.0)
-            .looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
-        PanOrbitCamera::default(),
-    ));
+    commands.spawn(
+            PanOrbitCamera::default()
+        ).insert(Transform::from_xyz(
+            10.0,
+            10.0,
+            10.0,
+        )
+        .looking_at(Vec3::new(
+            0.0,
+            0.0,
+            0.0,
+        ), Vec3::Y),
+);
 }
 
 fn toggle_wireframe(

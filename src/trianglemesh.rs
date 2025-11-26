@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::f32;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -126,5 +127,24 @@ impl TriangleMesh {
         }
         self.edges = new_edges;
         println!("End of remove_isolated_vertices()");
+    }
+
+    pub fn bounding_box(&self) -> [(f32,f32);3] {
+        let mut min_max_xyz: [(f32,f32);3] = [
+            (f32::INFINITY, f32::NEG_INFINITY), // x_min, x_max
+            (f32::INFINITY, f32::NEG_INFINITY), // y_min, y_max
+            (f32::INFINITY, f32::NEG_INFINITY), // z_min, z_max
+        ];
+        for [x,y,z] in self.positions.iter() {
+            min_max_xyz[0].0 = min_max_xyz[0].0.min(*x);
+            min_max_xyz[0].1 = min_max_xyz[0].1.max(*x);
+
+            min_max_xyz[1].0 = min_max_xyz[1].0.min(*y);
+            min_max_xyz[1].1 = min_max_xyz[1].1.max(*y);
+
+            min_max_xyz[2].0 = min_max_xyz[2].0.min(*z);
+            min_max_xyz[2].1 = min_max_xyz[2].1.max(*z);
+        }
+        min_max_xyz
     }
 }
