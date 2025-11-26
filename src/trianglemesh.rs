@@ -4,13 +4,14 @@ use std::io::prelude::*;
 
 pub struct TriangleMesh {
     pub positions: Vec<[f32;3]>, // 3d coordinates of vertices
+    pub uv: Vec<[f32;2]>, // 2d texture coordinates of vertices
     pub indices: Vec<u32>, // triangle definitions = vertex indices /!\ 0-based indices
     pub edges: HashSet<[u32;2]>, // edges definitions = vertex indices /!\ 0-based indices
 }
 
 impl TriangleMesh {
     pub fn new() -> TriangleMesh {
-        TriangleMesh { positions: Vec::new(), indices: Vec::new(), edges: HashSet::new() }
+        TriangleMesh { positions: Vec::new(), uv: Vec::new(), indices: Vec::new(), edges: HashSet::new() }
     }
 
     pub fn write_obj(&self, file_name: &str) {
@@ -103,6 +104,8 @@ impl TriangleMesh {
         }
         // update vertex definitions = positions
         self.positions = new_vertices;
+        // create uv
+        self.uv = vec![[1.0,1.0];self.positions.len()];
         // update triangle definitions = vertex indices
         assert!(self.indices.len() % 3 == 0);
         for triangle_index in 0..self.indices.len()/3 {

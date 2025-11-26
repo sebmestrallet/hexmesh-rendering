@@ -3,7 +3,7 @@ use bevy::{
     math::Vec3Swizzles,
     pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
     prelude::*,
-    asset::RenderAssetUsages,
+    asset::{RenderAssetUsages,Handle},
     render::{
         mesh::MeshRenderAssetPlugin,
         render_resource::{
@@ -12,6 +12,7 @@ use bevy::{
     },
     mesh::Indices,
     color::palettes::basic::SILVER,
+    image::Image
 };
 use bevy_panorbit_camera::{PanOrbitCamera,PanOrbitCameraPlugin};
 use crate::trianglemesh::TriangleMesh;
@@ -74,7 +75,11 @@ fn create_mesh_from(mesh: TriangleMesh) -> Mesh {
     Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
-            mesh.positions.clone()
+            mesh.positions
+        )
+        .with_inserted_attribute(
+            Mesh::ATTRIBUTE_UV_0,
+            mesh.uv
         )
         .with_inserted_indices(Indices::U32(mesh.indices))
 }
@@ -85,6 +90,17 @@ fn startup(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>
 ) {
+    
+    let parula_texture_handle: Handle<Image> = asset_server.load("parula.png"); // width=32px, height=1px
+
+    // https://bevy.org/examples/3d-rendering/texture/
+    let material_handle = materials.add(StandardMaterial {
+        base_color_texture: Some(parula_texture_handle.clone()),
+        alpha_mode: AlphaMode::Opaque,
+        unlit: true,
+        ..default()
+    });
+
     let mut mesh: HexMesh = HexMesh::from_medit(INPUT_FILE);
     
     mesh.compute_scaled_jacobian();
@@ -101,7 +117,7 @@ fn startup(
     commands
         .spawn((
             Mesh3d(meshes.add(create_mesh_from(trianglemesh))),
-            MeshMaterial3d(materials.add(Color::from(SILVER)))
+            MeshMaterial3d(material_handle)
         ))
         .insert(Wireframe);
 
