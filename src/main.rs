@@ -1,5 +1,4 @@
 use crate::hexmesh::*;
-use crate::wavefront::*;
 use bevy::{
     math::Vec3Swizzles,
     pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
@@ -20,7 +19,6 @@ use crate::trianglemesh::TriangleMesh;
 mod matrix;
 mod vector;
 mod hexmesh;
-mod wavefront;
 mod trianglemesh;
 
 static INPUT_FILE: &str = "input.mesh";
@@ -98,7 +96,7 @@ fn startup(
     trianglemesh.remove_isolated_vertices();
     trianglemesh.sanity_check();
 
-    write_obj("surface.obj", &trianglemesh);
+    trianglemesh.write_obj("surface.obj");
 
     commands
         .spawn((
