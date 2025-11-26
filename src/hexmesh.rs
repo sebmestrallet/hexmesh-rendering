@@ -4,7 +4,7 @@ use crate::vector::*;
 use crate::trianglemesh::TriangleMesh;
 
 pub struct Hexahedron {
-    pub vertices: [usize; 8], // 8 indices, for 8 vertices
+    pub vertices: [usize; 8], // 8 indices, for 8 vertices /!\ 0-based indices
 }
 
 impl Hexahedron {
@@ -155,7 +155,7 @@ impl HexMesh {
                             let v5: usize = parts[5].to_string().parse::<usize>().unwrap();
                             let v6: usize = parts[6].to_string().parse::<usize>().unwrap();
                             let v7: usize = parts[7].to_string().parse::<usize>().unwrap();
-                            cells.push(Hexahedron::new([v0,v1,v2,v3,v4,v5,v6,v7]));
+                            cells.push(Hexahedron::new([v0-1,v1-1,v2-1,v3-1,v4-1,v5-1,v6-1,v7-1])); // 1-based to 0-based indices
                         }
                         continue;
                     },
@@ -182,7 +182,7 @@ impl HexMesh {
                 for i in 0..4 { // [0] will be the current vertex, and [1:3] its 3 neighboring corners
                     let which_corner = Hexahedron::CORNER_SPLITING[hex_corner][i];
                     let vertex_index = self.cells.get(hex_index).unwrap().vertices[which_corner];
-                    v[i] = *self.points.get(vertex_index-1).unwrap_or_else(|| {
+                    v[i] = *self.points.get(vertex_index).unwrap_or_else(|| {
                             panic!("Cannot access `points` vec at {vertex_index}");
                         }
                     ); // get 3D coordinates of vertex at vertex_index
@@ -319,38 +319,18 @@ impl HexMesh {
                     trianglemesh.indices.push(v3);
                     trianglemesh.indices.push(v2);
 
-                    // but we want each vertex of a triangle to have the same color -> duplicate vertices
-                    /*trianglemesh.positions.reserve(6); // 6 new vertices
-                    trianglemesh.indices.reserve(6); // 2 new triangles -> 3*2 = 6 indices
-                    let first_index_of_new_vertices = trianglemesh.positions.len() as u32;
-                    
-                    trianglemesh.positions.push(self.points.get(v0).unwrap().as_array());
-                    trianglemesh.positions.push(self.points.get(v1).unwrap().as_array());
-                    trianglemesh.positions.push(self.points.get(v2).unwrap().as_array());
-
-                    trianglemesh.positions.push(self.points.get(v0).unwrap().as_array());
-                    trianglemesh.positions.push(self.points.get(v2).unwrap().as_array());
-                    trianglemesh.positions.push(self.points.get(v3).unwrap().as_array());
-
-                    trianglemesh.indices.push(first_index_of_new_vertices+0);
-                    trianglemesh.indices.push(first_index_of_new_vertices+2);
-                    trianglemesh.indices.push(first_index_of_new_vertices+1);
-
-                    trianglemesh.indices.push(first_index_of_new_vertices+3);
-                    trianglemesh.indices.push(first_index_of_new_vertices+5);
-                    trianglemesh.indices.push(first_index_of_new_vertices+4);
-
-                    assert!(trianglemesh.positions.len() == first_index_of_new_vertices as usize +6);*/
-
-                    // TODO assemble edges
+                    // assemble oriented edges
                     e0 = [v0,v1];
                     e1 = [v1,v2];
                     e2 = [v2,v3];
                     e3 = [v3,v0];
+                    // sort vertex indices inside edges -> unoriented edges
                     e0.sort();
                     e1.sort();
                     e2.sort();
                     e3.sort();
+
+                    // insert unoriented edges in the hashset of unique edges
                     trianglemesh.edges.insert(e0);
                     trianglemesh.edges.insert(e1);
                     trianglemesh.edges.insert(e2);

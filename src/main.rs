@@ -78,9 +78,7 @@ fn create_mesh_from(mesh: TriangleMesh) -> Mesh {
             Mesh::ATTRIBUTE_POSITION,
             mesh.positions.clone()
         )
-        // After defining all the vertices and their attributes, build each triangle using the
-        // indices of the vertices that make it up in a counter-clockwise order.
-        .with_inserted_indices(Indices::U32(mesh.indices.iter().map(|x|*x+1).collect::<Vec<u32>>()))
+        .with_inserted_indices(Indices::U32(mesh.indices))
 }
 
 fn startup(
@@ -105,7 +103,6 @@ fn startup(
     commands
         .spawn((
             Mesh3d(meshes.add(create_mesh_from(trianglemesh))),
-            // Mesh3d(meshes.add(create_simple_pyramid())),
             MeshMaterial3d(materials.add(Color::from(SILVER)))
         ))
         .insert(Wireframe);

@@ -25,10 +25,10 @@ pub fn write_obj(file_name: &str, mesh: &TriangleMesh) {
         v0 = *mesh.indices.get(triangle_index*3+0).unwrap();
         v1 = *mesh.indices.get(triangle_index*3+1).unwrap();
         v2 = *mesh.indices.get(triangle_index*3+2).unwrap();
-        let _ = file.write_all(format!("f {} {} {}\n", v0, v1, v2).as_bytes()); // /!\ 1-based indices
+        let _ = file.write_all(format!("f {} {} {}\n", v0+1, v1+1, v2+1).as_bytes()); // /!\ 0-based to 1-based indices
     }
     for edge in mesh.edges.iter() {
-        let _ = file.write_all(format!("l {} {}\n", edge[0], edge[1]).as_bytes()); // /!\ 1-based indices
+        let _ = file.write_all(format!("l {} {}\n", edge[0]+1, edge[1]+1).as_bytes()); // /!\ 0-based to 1-based indices
     }
     println!("{file_name} written");
 }

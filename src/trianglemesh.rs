@@ -2,8 +2,8 @@ use std::collections::{HashMap, HashSet};
 
 pub struct TriangleMesh {
     pub positions: Vec<[f32;3]>, // 3d coordinates of vertices
-    pub indices: Vec<u32>, // triangle definitions = vertex indices
-    pub edges: HashSet<[u32;2]>, // edges definitions = vertex indices
+    pub indices: Vec<u32>, // triangle definitions = vertex indices /!\ 0-based indices
+    pub edges: HashSet<[u32;2]>, // edges definitions = vertex indices /!\ 0-based indices
 }
 
 impl TriangleMesh {
@@ -34,7 +34,6 @@ impl TriangleMesh {
     pub fn remove_isolated_vertices(&mut self) {
         assert!(!self.positions.is_empty());
         assert!(!self.indices.is_empty());
-        // let mut to_remove: Vec<bool> = vec![true;self.positions.len()];
 
         let mut old_to_new_indices: HashMap<u32,u32> = HashMap::new(); // map an old vertex index (index in `self.positions`) to a new vertex index (index in `new_vertices`)
         let mut new_vertices: Vec<[f32;3]> = Vec::with_capacity(self.positions.len()); // at most, no vertex is removed, and `new_vertices` will have the same size as `self.positions` (the old vertices)
@@ -43,7 +42,6 @@ impl TriangleMesh {
             for local_vertex_index in 0..3 {
                 let vertex_index = *self.indices.get(triangle_index*3+local_vertex_index).unwrap();
                 if let Some(new_vertex_index_ref) = old_to_new_indices.get(&vertex_index) {
-                    assert!(*new_vertex_index_ref < new_vertices.len().try_into().unwrap());
                     // we already attributed a new index to this old index
                     old_to_new_indices.insert(vertex_index, *new_vertex_index_ref);
                 }
@@ -51,10 +49,6 @@ impl TriangleMesh {
                     // this index is referenced, we must keep it
                     let vertex_index_as_usize = vertex_index as usize;
                     let coordinates: &[f32; 3] = self.positions.get(vertex_index_as_usize).unwrap();
-                    /*.unwrap_or(
-                        // panic!("Cannot access coordinates of vertex {}/{}",vertex_index,self.positions.len())
-                        break
-                    );*/
                     let index_of_new_vertex: u32 = TryInto::<u32>::try_into(new_vertices.len()).unwrap();
                     new_vertices.push(*coordinates);
                     old_to_new_indices.insert(vertex_index, index_of_new_vertex);
