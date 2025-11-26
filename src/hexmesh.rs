@@ -1,6 +1,7 @@
 use std::fs;
 use std::collections::{HashSet,HashMap};
 use crate::vector::*;
+use crate::trianglemesh::TriangleMesh;
 
 pub struct Hexahedron {
     pub vertices: [usize; 8], // 8 indices, for 8 vertices
@@ -257,34 +258,91 @@ impl HexMesh {
         println!("End of compute_cell_adjacency");
     }
 
-    pub fn triangulate_surface(&mut self) -> Vec<(usize,usize,usize)> {
+    pub fn triangulate_surface(&mut self) -> TriangleMesh {
         if self.cell_adjacency.is_empty() {
             self.compute_cell_adjacency();
         }
         // extract surface of the mesh
-        let mut triangles: Vec<(usize,usize,usize)> = Vec::new();
-        let mut unique_quad_edges: HashSet<[usize; 2]> = HashSet::new();
-        let mut v0: usize;
-        let mut v1: usize;
-        let mut v2: usize;
-        let mut v3: usize;
-        let mut e0: [usize; 2]; // edge between v0 and v1;
-        let mut e1: [usize; 2]; // edge between v1 and v2;
-        let mut e2: [usize; 2]; // edge between v2 and v3;
-        let mut e3: [usize; 2]; // edge between v3 and v0;
+        let mut trianglemesh = TriangleMesh::new();
+        assert!(trianglemesh.positions.len() == 0);
+        assert!(trianglemesh.indices.len() == 0);
+        assert!(trianglemesh.edges.len() == 0);
+        let mut v0: u32;
+        let mut v1: u32;
+        let mut v2: u32;
+        let mut v3: u32;
+        let mut e0: [u32; 2]; // edge between v0 and v1;
+        let mut e1: [u32; 2]; // edge between v1 and v2;
+        let mut e2: [u32; 2]; // edge between v2 and v3;
+        let mut e3: [u32; 2]; // edge between v3 and v0;
+        trianglemesh.positions.reserve(self.points.len());
+        for vertex_index in 0..self.points.len() {
+            let current_vertex = self.points.get(vertex_index).unwrap();
+            trianglemesh.positions.push([
+                current_vertex.x,
+                current_vertex.y,
+                current_vertex.z,
+            ]);
+        }
+        assert!(trianglemesh.positions.len() == self.points.len());
         for hex_index in 0..self.cells.len() {
             let current_hex: &Hexahedron = self.cells.get(hex_index).unwrap();
             for facet_index in 0..6 {
+                assert!(Hexahedron::FACET_SPLITTING[facet_index][0] == facet_index);
                 let at_other_side = self.cell_adjacency.get(hex_index).unwrap().get(facet_index).unwrap();
                 if *at_other_side == None {
                     // this facet (quad) is on the surface
-                    // create 2 triangles, [v0,v1,v2] and [v0,v2,v3]
-                    v0 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][1]).unwrap();
-                    v1 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][2]).unwrap();
-                    v2 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][3]).unwrap();
-                    v3 = *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][4]).unwrap();
-                    triangles.push((v0,v1,v2));
-                    triangles.push((v0,v2,v3));
+                    // create 2 triangles, [v0,v2,v1] and [v0,v3,v2]
+                    // v1 +-----+ v2
+                    //    |  // |
+                    //    | //  |
+                    // v0 +-----+ v3
+                    v0 = TryInto::<u32>::try_into(
+                        *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][1]).unwrap()
+                    ).unwrap();
+                    v1 = TryInto::<u32>::try_into(
+                        *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][2]).unwrap()
+                    ).unwrap();
+                    v2 = TryInto::<u32>::try_into(
+                        *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][3]).unwrap()
+                    ).unwrap();
+                    v3 = TryInto::<u32>::try_into(
+                        *current_hex.vertices.get(Hexahedron::FACET_SPLITTING[facet_index][4]).unwrap()
+                    ).unwrap();
+
+                    trianglemesh.indices.reserve(6); // 2 new triangles -> 3*2 = 6 indices
+                    trianglemesh.indices.push(v0);
+                    trianglemesh.indices.push(v2);
+                    trianglemesh.indices.push(v1);
+
+                    trianglemesh.indices.push(v0);
+                    trianglemesh.indices.push(v3);
+                    trianglemesh.indices.push(v2);
+
+                    // but we want each vertex of a triangle to have the same color -> duplicate vertices
+                    /*trianglemesh.positions.reserve(6); // 6 new vertices
+                    trianglemesh.indices.reserve(6); // 2 new triangles -> 3*2 = 6 indices
+                    let first_index_of_new_vertices = trianglemesh.positions.len() as u32;
+                    
+                    trianglemesh.positions.push(self.points.get(v0).unwrap().as_array());
+                    trianglemesh.positions.push(self.points.get(v1).unwrap().as_array());
+                    trianglemesh.positions.push(self.points.get(v2).unwrap().as_array());
+
+                    trianglemesh.positions.push(self.points.get(v0).unwrap().as_array());
+                    trianglemesh.positions.push(self.points.get(v2).unwrap().as_array());
+                    trianglemesh.positions.push(self.points.get(v3).unwrap().as_array());
+
+                    trianglemesh.indices.push(first_index_of_new_vertices+0);
+                    trianglemesh.indices.push(first_index_of_new_vertices+2);
+                    trianglemesh.indices.push(first_index_of_new_vertices+1);
+
+                    trianglemesh.indices.push(first_index_of_new_vertices+3);
+                    trianglemesh.indices.push(first_index_of_new_vertices+5);
+                    trianglemesh.indices.push(first_index_of_new_vertices+4);
+
+                    assert!(trianglemesh.positions.len() == first_index_of_new_vertices as usize +6);*/
+
+                    // TODO assemble edges
                     e0 = [v0,v1];
                     e1 = [v1,v2];
                     e2 = [v2,v3];
@@ -293,14 +351,16 @@ impl HexMesh {
                     e1.sort();
                     e2.sort();
                     e3.sort();
-                    unique_quad_edges.insert(e0);
-                    unique_quad_edges.insert(e1);
-                    unique_quad_edges.insert(e2);
-                    unique_quad_edges.insert(e3);
+                    trianglemesh.edges.insert(e0);
+                    trianglemesh.edges.insert(e1);
+                    trianglemesh.edges.insert(e2);
+                    trianglemesh.edges.insert(e3);
                 }
             }
         }
-        println!("Surface mesh: {} triangles",triangles.len());
-        triangles
+        assert!(!trianglemesh.positions.is_empty());
+        assert!(trianglemesh.indices.len() % 3 == 0);
+        println!("End of triangulate_surface()");
+        trianglemesh
     }
 }

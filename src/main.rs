@@ -15,11 +15,13 @@ use bevy::{
     color::palettes::basic::SILVER,
 };
 use bevy_panorbit_camera::{PanOrbitCamera,PanOrbitCameraPlugin};
+use crate::trianglemesh::TriangleMesh;
 
 mod matrix;
 mod vector;
 mod hexmesh;
 mod wavefront;
+mod trianglemesh;
 
 static INPUT_FILE: &str = "input.mesh";
 
@@ -38,11 +40,6 @@ fn create_simple_parallelogram() -> Mesh {
             Mesh::ATTRIBUTE_UV_0,
             vec![[0.0, 1.0], [0.5, 0.0], [1.0, 0.0], [0.5, 1.0]]
         )
-        // Assign normals (everything points outwards)
-        .with_inserted_attribute(
-            Mesh::ATTRIBUTE_NORMAL,
-            vec![[0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0]]
-        )
         // After defining all the vertices and their attributes, build each triangle using the
         // indices of the vertices that make it up in a counter-clockwise order.
         .with_inserted_indices(Indices::U32(vec![
@@ -53,15 +50,62 @@ fn create_simple_parallelogram() -> Mesh {
         ]))
 }
 
+fn create_simple_pyramid() -> Mesh {
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+        .with_inserted_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            vec![
+                [0.0, 0.0, 0.0], // 0
+                [1.0, 0.0, 0.0], // 1
+                [1.0, 1.0, 0.0], // 2
+                [0.0, 1.0, 0.0], // 3
+                [0.5, 0.5, 1.0]  // 4
+            ]
+        )
+        .with_inserted_indices(Indices::U32(vec![
+            0,2,1, // 1/2 bottom
+            0,3,2, // 1/2 bottom
+            0,1,4,
+            1,2,4,
+            2,3,4,
+            3,0,4
+        ]))
+}
+
+fn create_mesh_from(mesh: TriangleMesh) -> Mesh {
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+        .with_inserted_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            mesh.positions.clone()
+        )
+        // After defining all the vertices and their attributes, build each triangle using the
+        // indices of the vertices that make it up in a counter-clockwise order.
+        .with_inserted_indices(Indices::U32(mesh.indices.iter().map(|x|*x+1).collect::<Vec<u32>>()))
+}
+
 fn startup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>
 ) {
+    let mut mesh: HexMesh = HexMesh::from_medit(INPUT_FILE);
+    
+    mesh.compute_scaled_jacobian();
+    println!("Scaled Jacobians computed");
+
+    let mut trianglemesh = mesh.triangulate_surface();
+    trianglemesh.sanity_check();
+
+    // trianglemesh.remove_isolated_vertices();
+    // trianglemesh.sanity_check();
+
+    write_obj("surface.obj", &trianglemesh);
+
     commands
         .spawn((
-            Mesh3d(meshes.add(create_simple_parallelogram())),
+            Mesh3d(meshes.add(create_mesh_from(trianglemesh))),
+            // Mesh3d(meshes.add(create_simple_pyramid())),
             MeshMaterial3d(materials.add(Color::from(SILVER)))
         ))
         .insert(Wireframe);
@@ -83,15 +127,6 @@ fn toggle_wireframe(
 }
 
 fn main() {
-    // let mut mesh: HexMesh = HexMesh::from_medit(INPUT_FILE);
-    
-    // mesh.compute_scaled_jacobian();
-    // println!("Scaled Jacobians computed");
-
-    // let triangles: Vec<(usize,usize,usize)> = mesh.triangulate_surface();
-
-    // write_obj("surface.obj", &mesh.points, &triangles);
-
     App::new()
         .insert_resource(ClearColor(Color::WHITE))
         .add_plugins((

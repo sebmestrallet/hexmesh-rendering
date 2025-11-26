@@ -42,6 +42,10 @@ impl Vec3 {
     pub fn cross(self, rhs: &Vec3) -> Vec3 {
         cross(&self,rhs)
     }
+
+    pub fn as_array(self) -> [f32; 3] {
+        [self.x, self.y, self.z]
+    }
 }
 
 impl Div<f32> for Vec3 {
