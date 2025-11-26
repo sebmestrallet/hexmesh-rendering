@@ -1,20 +1,18 @@
 use crate::hexmesh::*;
 use bevy::{
-    math::Vec3Swizzles,
-    pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
     prelude::*,
+    pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
     asset::{RenderAssetUsages,Handle},
     render::{
-        mesh::MeshRenderAssetPlugin,
-        render_resource::{
-            AsBindGroup, PrimitiveTopology
-        },
+        render_resource::PrimitiveTopology,
     },
     mesh::Indices,
-    color::palettes::basic::SILVER,
-    image::Image
+    image::Image,
+    color::palettes::basic::BLACK,
+    prelude::Vec3
 };
 use bevy_panorbit_camera::{PanOrbitCamera,PanOrbitCameraPlugin};
+
 use crate::trianglemesh::TriangleMesh;
 
 mod matrix;
@@ -72,7 +70,7 @@ fn create_simple_pyramid() -> Mesh {
 }
 
 fn create_mesh_from(mesh: TriangleMesh) -> Mesh {
-    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+    let mut res = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
             mesh.positions
@@ -80,8 +78,18 @@ fn create_mesh_from(mesh: TriangleMesh) -> Mesh {
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_UV_0,
             mesh.uv
+        );
+    res
+}
+
+fn create_lines_from(positions: Vec<[f32; 3]>,indices: Vec<u32>) -> Mesh {
+    let mut res = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::default())
+        .with_inserted_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            positions
         )
-        .with_inserted_indices(Indices::U32(mesh.indices))
+        .with_inserted_indices(Indices::U32(indices));
+    res
 }
 
 fn startup(
@@ -114,6 +122,8 @@ fn startup(
 
     // trianglemesh.write_obj("surface.obj");
 
+    let (wireframe_positions, wireframe_indices) = trianglemesh.create_wireframe_mesh();
+
     let bounding_box = trianglemesh.bounding_box();
     println!("Bounding box {:?}",bounding_box);
 
@@ -125,10 +135,24 @@ fn startup(
             MeshMaterial3d(material_handle)
         ))
         .insert(Transform::from_xyz(
-                -(bounding_box[0].1-bounding_box[0].0) / 2.0,
-                -(bounding_box[1].1-bounding_box[1].0) / 2.0,
-                -(bounding_box[2].1-bounding_box[2].0) / 2.0,
-            ))
+            -(bounding_box[0].1-bounding_box[0].0) / 2.0,
+            -(bounding_box[1].1-bounding_box[1].0) / 2.0,
+            -(bounding_box[2].1-bounding_box[2].0) / 2.0,
+        ));
+
+    commands
+        .spawn((
+            Mesh3d(meshes.add(create_lines_from(wireframe_positions, wireframe_indices))),
+            MeshMaterial3d(materials.add(StandardMaterial  {
+                base_color: BLACK.into(),
+                ..Default::default()
+        })),
+        ))
+        .insert(Transform::from_xyz(
+            -(bounding_box[0].1-bounding_box[0].0) / 2.0,
+            -(bounding_box[1].1-bounding_box[1].0) / 2.0,
+            -(bounding_box[2].1-bounding_box[2].0) / 2.0,
+        ))
         .insert(Wireframe);
 
     commands.spawn(
@@ -146,30 +170,18 @@ fn startup(
 );
 }
 
-fn toggle_wireframe(
-    mut wireframe_config: ResMut<WireframeConfig>,
-    keyboard: Res<ButtonInput<KeyCode>>,
-) {
-    if keyboard.just_pressed(KeyCode::Space) {
-        wireframe_config.global = !wireframe_config.global;
-    }
-}
-
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::WHITE))
+        .insert_resource(WireframeConfig {
+            global: false,
+            default_color: BLACK.into(),
+        })
         .add_plugins((
             DefaultPlugins,
             WireframePlugin::default(),
             PanOrbitCameraPlugin
         ))
         .add_systems(Startup, startup)
-        .add_systems(
-            Update,
-            (
-                toggle_wireframe,
-            ),
-        )
-
         .run();
 }

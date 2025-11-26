@@ -1,5 +1,5 @@
 use std::fs;
-use std::collections::{HashSet,HashMap};
+use std::collections::HashMap;
 use crate::vector::*;
 use crate::trianglemesh::TriangleMesh;
 

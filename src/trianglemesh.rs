@@ -214,4 +214,15 @@ impl TriangleMesh {
         assert!(self.positions.len() == nb_triangles*3);
         assert!(self.uv.len() == nb_triangles*3);
     }
+
+    pub fn create_wireframe_mesh(&self) -> (Vec<[f32; 3]>,Vec<u32>) {
+        let mut positions: Vec<[f32; 3]> = self.positions.clone();
+        let mut indices: Vec<u32> = Vec::with_capacity(self.edges.len() * 2);
+        for edge in self.edges.iter() {
+            indices.push(edge[0]);
+            indices.push(edge[1]);
+        }
+        assert!(indices.len() == self.edges.len() * 2);
+        (positions,indices)
+    }
 }
