@@ -95,8 +95,8 @@ fn startup(
     let mut trianglemesh = mesh.triangulate_surface();
     trianglemesh.sanity_check();
 
-    // trianglemesh.remove_isolated_vertices();
-    // trianglemesh.sanity_check();
+    trianglemesh.remove_isolated_vertices();
+    trianglemesh.sanity_check();
 
     write_obj("surface.obj", &trianglemesh);
 
