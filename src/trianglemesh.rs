@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::f32;
 use std::fs::File;
 use std::io::prelude::*;
+use crate::wireframe::WireframeMesh;
 
 pub struct TriangleMesh {
     pub positions: Vec<[f32;3]>, // 3d coordinates of vertices
@@ -216,14 +217,15 @@ impl TriangleMesh {
         assert!(self.uv.len() == nb_triangles*3);
     }
 
-    pub fn create_wireframe_mesh(&self) -> (Vec<[f32; 3]>,Vec<u32>) {
-        let positions: Vec<[f32; 3]> = self.positions.clone();
-        let mut indices: Vec<u32> = Vec::with_capacity(self.edges.len() * 2);
+    pub fn create_wireframe_mesh(&self) -> WireframeMesh {
+        let mut wireframe_mesh: WireframeMesh = WireframeMesh::new();
+        wireframe_mesh.vertices = self.positions.clone();
+        wireframe_mesh.edges.reserve(self.edges.len() * 2);
         for edge in self.edges.iter() {
-            indices.push(edge[0]);
-            indices.push(edge[1]);
+            wireframe_mesh.edges.push(edge[0]);
+            wireframe_mesh.edges.push(edge[1]);
         }
-        assert!(indices.len() == self.edges.len() * 2);
-        (positions,indices)
+        assert!(wireframe_mesh.edges.len() == self.edges.len() * 2);
+        wireframe_mesh
     }
 }

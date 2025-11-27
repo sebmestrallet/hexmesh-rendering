@@ -1,24 +1,23 @@
-use crate::hexmesh::*;
 use bevy::{
     prelude::*,
     pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
     asset::{RenderAssetUsages,Handle},
-    render::{
-        render_resource::PrimitiveTopology,
-    },
+    render::render_resource::PrimitiveTopology,
     mesh::Indices,
     image::Image,
     color::palettes::basic::BLACK,
     prelude::Vec3
 };
 use bevy_panorbit_camera::{PanOrbitCamera,PanOrbitCameraPlugin};
-
+use crate::hexmesh::*;
 use crate::trianglemesh::TriangleMesh;
+use crate::wireframe::WireframeMesh;
 
 mod matrix;
 mod vector;
 mod hexmesh;
 mod trianglemesh;
+mod wireframe;
 
 static INPUT_FILE: &str = "input.mesh";
 
@@ -35,14 +34,14 @@ fn create_mesh_from(mesh: TriangleMesh) -> Mesh {
         )
 }
 
-fn create_lines_from(positions: Vec<[f32; 3]>,indices: Vec<u32>) -> Mesh {
+fn create_lines_from(wireframe: WireframeMesh) -> Mesh {
     Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::default())
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
-            positions
+            wireframe.vertices
         )
         .with_inserted_indices(
-            Indices::U32(indices)
+            Indices::U32(wireframe.edges)
         )
 }
 
@@ -74,7 +73,7 @@ fn startup(
     trianglemesh.remove_isolated_vertices();
     trianglemesh.sanity_check();
 
-    let (wireframe_positions, wireframe_indices) = trianglemesh.create_wireframe_mesh();
+    let wireframe_mesh = trianglemesh.create_wireframe_mesh();
 
     let bounding_box = trianglemesh.bounding_box();
     println!("Bounding box {:?}",bounding_box);
@@ -94,7 +93,7 @@ fn startup(
 
     commands
         .spawn((
-            Mesh3d(meshes.add(create_lines_from(wireframe_positions, wireframe_indices))),
+            Mesh3d(meshes.add(create_lines_from(wireframe_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial  {
                 base_color: BLACK.into(),
                 ..Default::default()
