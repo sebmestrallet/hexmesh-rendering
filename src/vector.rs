@@ -23,6 +23,7 @@ pub fn cross(v0: &Vec3, v1: &Vec3) -> Vec3 {
 impl Vec3 {
     pub const ZERO: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
 
+    #[allow(unused)]
     pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
         Vec3 { x: x, y: y, z: z}
     }
@@ -35,14 +36,17 @@ impl Vec3 {
         self / self.length()
     }
 
+    #[allow(unused)]
     pub fn dot(self, rhs: &Vec3) -> f32 {
         dot(&self,rhs)
     }
 
+    #[allow(unused)]
     pub fn cross(self, rhs: &Vec3) -> Vec3 {
         cross(&self,rhs)
     }
 
+    #[allow(unused)]
     pub fn as_array(self) -> [f32; 3] {
         [self.x, self.y, self.z]
     }

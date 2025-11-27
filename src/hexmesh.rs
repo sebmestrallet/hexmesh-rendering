@@ -55,6 +55,7 @@ pub struct HexMesh {
 }
 
 impl HexMesh {
+    #[allow(unused)]
     pub fn new() -> HexMesh {
         let points = Vec::new();
         let cells = Vec::new();

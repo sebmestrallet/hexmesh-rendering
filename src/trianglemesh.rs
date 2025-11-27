@@ -15,6 +15,7 @@ impl TriangleMesh {
         TriangleMesh { positions: Vec::new(), uv: Vec::new(), indices: Vec::new(), edges: HashSet::new() }
     }
 
+    #[allow(unused)]
     pub fn write_obj(&self, file_name: &str) {
         // Wavefront .obj file
         // ---
@@ -216,7 +217,7 @@ impl TriangleMesh {
     }
 
     pub fn create_wireframe_mesh(&self) -> (Vec<[f32; 3]>,Vec<u32>) {
-        let mut positions: Vec<[f32; 3]> = self.positions.clone();
+        let positions: Vec<[f32; 3]> = self.positions.clone();
         let mut indices: Vec<u32> = Vec::with_capacity(self.edges.len() * 2);
         for edge in self.edges.iter() {
             indices.push(edge[0]);

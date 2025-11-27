@@ -22,55 +22,9 @@ mod trianglemesh;
 
 static INPUT_FILE: &str = "input.mesh";
 
-// https://docs.rs/bevy/latest/bevy/mesh/struct.Mesh.html#manual-creation
-fn create_simple_parallelogram() -> Mesh {
-    // Create a new mesh using a triangle list topology, where each set of 3 vertices composes a triangle.
-    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
-        // Add 4 vertices, each with its own position attribute (coordinate in
-        // 3D space), for each of the corners of the parallelogram.
-        .with_inserted_attribute(
-            Mesh::ATTRIBUTE_POSITION,
-            vec![[0.0, 0.0, 0.0], [1.0, 2.0, 0.0], [2.0, 2.0, 0.0], [1.0, 0.0, 0.0]]
-        )
-        // Assign a UV coordinate to each vertex.
-        .with_inserted_attribute(
-            Mesh::ATTRIBUTE_UV_0,
-            vec![[0.0, 1.0], [0.5, 0.0], [1.0, 0.0], [0.5, 1.0]]
-        )
-        // After defining all the vertices and their attributes, build each triangle using the
-        // indices of the vertices that make it up in a counter-clockwise order.
-        .with_inserted_indices(Indices::U32(vec![
-            // First triangle
-            0, 3, 1,
-            // Second triangle
-            1, 3, 2
-        ]))
-}
-
-fn create_simple_pyramid() -> Mesh {
-    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
-        .with_inserted_attribute(
-            Mesh::ATTRIBUTE_POSITION,
-            vec![
-                [0.0, 0.0, 0.0], // 0
-                [1.0, 0.0, 0.0], // 1
-                [1.0, 1.0, 0.0], // 2
-                [0.0, 1.0, 0.0], // 3
-                [0.5, 0.5, 1.0]  // 4
-            ]
-        )
-        .with_inserted_indices(Indices::U32(vec![
-            0,2,1, // 1/2 bottom
-            0,3,2, // 1/2 bottom
-            0,1,4,
-            1,2,4,
-            2,3,4,
-            3,0,4
-        ]))
-}
-
 fn create_mesh_from(mesh: TriangleMesh) -> Mesh {
-    let mut res = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+    // https://docs.rs/bevy/latest/bevy/mesh/struct.Mesh.html#manual-creation
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
             mesh.positions
@@ -78,18 +32,18 @@ fn create_mesh_from(mesh: TriangleMesh) -> Mesh {
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_UV_0,
             mesh.uv
-        );
-    res
+        )
 }
 
 fn create_lines_from(positions: Vec<[f32; 3]>,indices: Vec<u32>) -> Mesh {
-    let mut res = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::default())
+    Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::default())
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
             positions
         )
-        .with_inserted_indices(Indices::U32(indices));
-    res
+        .with_inserted_indices(
+            Indices::U32(indices)
+        )
 }
 
 fn startup(
@@ -119,8 +73,6 @@ fn startup(
 
     trianglemesh.remove_isolated_vertices();
     trianglemesh.sanity_check();
-
-    // trianglemesh.write_obj("surface.obj");
 
     let (wireframe_positions, wireframe_indices) = trianglemesh.create_wireframe_mesh();
 
