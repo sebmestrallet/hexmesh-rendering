@@ -1,6 +1,8 @@
 use std::ops::{Div, Sub};
 use crate::matrix::det2x2;
 
+/// A 3D vector
+/// TODO use a [f32;3]?
 #[derive(Debug, Clone, Copy)]
 pub struct Vec3 {
     pub x: f32,
@@ -8,10 +10,12 @@ pub struct Vec3 {
     pub z: f32
 }
 
+/// Compute the dot product of 2 `Vec3`
 pub fn dot(v0: &Vec3, v1: &Vec3) -> f32 {
     v0.x * v1.x + v0.y * v1.y + v0.z * v1.z
 }
 
+/// Compute the cross product of 2 `Vec3`
 pub fn cross(v0: &Vec3, v1: &Vec3) -> Vec3 {
     Vec3 {
         x: det2x2(&v0.y, &v1.y, &v0.z, &v1.z),
@@ -32,6 +36,7 @@ impl Vec3 {
         return (self.x * self.x + self.y * self.y + self.z * self.z).sqrt();
     }
 
+    /// Return a normalised vector (same direction, but length of 1)
     pub fn normalized(self) -> Vec3 {
         self / self.length()
     }
@@ -52,6 +57,7 @@ impl Vec3 {
     }
 }
 
+/// Define division of a `Vec3` by a `f32`
 impl Div<f32> for Vec3 {
     type Output = Self;
 
@@ -60,6 +66,7 @@ impl Div<f32> for Vec3 {
     }
 }
 
+/// Define substraction of a `Vec3` by a `Vec3`
 impl Sub<Vec3> for Vec3 {
     type Output = Self;
 

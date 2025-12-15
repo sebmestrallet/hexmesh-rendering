@@ -19,8 +19,9 @@ mod hexmesh;
 mod trianglemesh;
 mod wireframe;
 
-static INPUT_FILE: &str = "input.mesh";
+static INPUT_FILE: &str = "input.mesh"; // must be a hexmesh in MEDIT format
 
+/// Create a Bevy mesh from my TriangleMesh struct
 fn create_mesh_from(mesh: TriangleMesh) -> Mesh {
     // https://docs.rs/bevy/latest/bevy/mesh/struct.Mesh.html#manual-creation
     Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
@@ -34,6 +35,7 @@ fn create_mesh_from(mesh: TriangleMesh) -> Mesh {
         )
 }
 
+/// Create a Bevy mesh from my WireframeMesh struct
 fn create_lines_from(wireframe: WireframeMesh) -> Mesh {
     Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::default())
         .with_inserted_attribute(
@@ -52,8 +54,10 @@ fn startup(
     mut materials: ResMut<Assets<StandardMaterial>>
 ) {
     
+    // load the image colormap used for per-hexahedron quality (Scaled Jacobian)
     let parula_texture_handle: Handle<Image> = asset_server.load("parula.png"); // width=32px, height=1px
 
+    // create a standard material for the colored surface
     // https://bevy.org/examples/3d-rendering/texture/
     let material_handle = materials.add(StandardMaterial {
         base_color_texture: Some(parula_texture_handle.clone()),
@@ -62,24 +66,28 @@ fn startup(
         ..default()
     });
 
+    // read the input file and fill a HexMesh struct
     let mut mesh: HexMesh = HexMesh::from_medit(INPUT_FILE);
     
+    // compute per-hexahedron quality
     mesh.compute_scaled_jacobian();
     println!("Scaled Jacobians computed");
 
+    // triangulate the surface + store edges of the quad mesh, then remove isolated vertices (not on the surface)
     let (mut trianglemesh,per_triangle_scaled_jacobian): (TriangleMesh, Vec<f32>) = mesh.triangulate_surface();
-    trianglemesh.sanity_check();
-
     trianglemesh.remove_isolated_vertices();
-    trianglemesh.sanity_check();
 
+    // extrat a wireframe mesh (edges of the quad mesh) from the edges stored in the TriangleMesh struct
     let wireframe_mesh = trianglemesh.create_wireframe_mesh();
 
+    // compute the bounding box, in order to place the mesh center at 0,0,0
     let bounding_box = trianglemesh.bounding_box();
     println!("Bounding box {:?}",bounding_box);
 
+    // create vertices, so that adjacent triangles don't share vertices <=> don't share uv coordinates <=> don't share the same colors
     trianglemesh.duplicate_vertices(&per_triangle_scaled_jacobian);
 
+    // spawn the triangulated hexmesh surface
     commands
         .spawn((
             Mesh3d(meshes.add(create_mesh_from(trianglemesh))),
@@ -91,6 +99,7 @@ fn startup(
             -(bounding_box[2].1-bounding_box[2].0) / 2.0,
         ));
 
+    // spawn the wireframe of the quad mesh
     commands
         .spawn((
             Mesh3d(meshes.add(create_lines_from(wireframe_mesh))),
@@ -106,6 +115,7 @@ fn startup(
         ))
         .insert(Wireframe);
 
+    // spawn a PanOrbitCamera
     commands.spawn(
             PanOrbitCamera::default()
         ).insert(Transform::from_xyz(
@@ -123,7 +133,7 @@ fn startup(
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::WHITE))
+        .insert_resource(ClearColor(Color::WHITE)) // set a white background
         .insert_resource(WireframeConfig {
             global: false,
             default_color: BLACK.into(),

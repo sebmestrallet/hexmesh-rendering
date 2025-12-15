@@ -254,7 +254,6 @@ impl HexMesh {
             self.cell_adjacency.push(adjacent_cells);
         }
         println!("cell_adjacency.len() = {}",self.cell_adjacency.len());
-        println!("{:?}",self.cell_adjacency.last());
 
         println!("End of compute_cell_adjacency");
     }

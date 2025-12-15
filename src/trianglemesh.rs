@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use crate::wireframe::WireframeMesh;
 
+/// A triangle mesh, with per-vertex uv coordinates, and edges
 pub struct TriangleMesh {
     pub positions: Vec<[f32;3]>, // 3d coordinates of vertices
     pub uv: Vec<[f32;2]>, // 2d texture coordinates of vertices
@@ -16,6 +17,7 @@ impl TriangleMesh {
         TriangleMesh { positions: Vec::new(), uv: Vec::new(), indices: Vec::new(), edges: HashSet::new() }
     }
 
+    /// Export as Wavefront .obj file. Triangles & edges are written, but not per-vertex uv coordinates
     #[allow(unused)]
     pub fn write_obj(&self, file_name: &str) {
         // Wavefront .obj file
@@ -47,6 +49,7 @@ impl TriangleMesh {
         println!("{file_name} written");
     }
 
+    /// Checks that the vertex indices referenced inside `self.indices` are `self.edges` are valid (in the range [0:nb_vertices[ )
     pub fn sanity_check(&self) {
         assert!(self.indices.len() % 3 == 0);
         let nb_triangles = self.indices.len()/3;
@@ -67,6 +70,7 @@ impl TriangleMesh {
         println!("TriangleMesh sanity_check() OK");
     }
 
+    // Identify & remove vertices not referenced, neither by triangle nor edge, then update vertex indices
     pub fn remove_isolated_vertices(&mut self) {
         assert!(!self.positions.is_empty());
         assert!(!self.indices.is_empty());
@@ -131,6 +135,7 @@ impl TriangleMesh {
         println!("End of remove_isolated_vertices()");
     }
 
+    /// Compute the min/max x/y/z vertex coordinates
     pub fn bounding_box(&self) -> [(f32,f32);3] {
         let mut min_max_xyz: [(f32,f32);3] = [
             (f32::INFINITY, f32::NEG_INFINITY), // x_min, x_max
@@ -150,12 +155,14 @@ impl TriangleMesh {
         min_max_xyz
     }
 
+    /// Create vertices on same coordinates so that triangles don't share vertices
     pub fn duplicate_vertices(&mut self, per_triangle_scaled_jacobian: &Vec<f32>) {
         // no longer share vertices between triangles
         // each triangle will have its 3 own vertices
         // to have per-triangle uv coordinates instead of per-vertex uv coordinates
         assert!(self.indices.len() % 3 == 0);
         let nb_triangles = self.indices.len()/3;
+        assert!(per_triangle_scaled_jacobian.len() == nb_triangles);
         let mut new_vertices: Vec<[f32;3]> = Vec::with_capacity(nb_triangles*3);
         self.uv.clear();
         self.uv.reserve(nb_triangles*3);
@@ -217,6 +224,7 @@ impl TriangleMesh {
         assert!(self.uv.len() == nb_triangles*3);
     }
 
+    /// Create a `WireframeMesh` from `self.edges`
     pub fn create_wireframe_mesh(&self) -> WireframeMesh {
         let mut wireframe_mesh: WireframeMesh = WireframeMesh::new();
         wireframe_mesh.vertices = self.positions.clone();
