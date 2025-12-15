@@ -1,3 +1,5 @@
+# bevy-hexmesh
+
 ```bash
 cargo run
 ```
