@@ -1,0 +1,25 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: bevy-hexmesh
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Sébastien
+    family-names: Mestrallet
+    email: sebastien.mestrallet@hey.com
+    orcid: 'https://orcid.org/0000-0002-4519-2814'
+repository-code: 'https://codeberg.org/sebmestrallet/bevy-hexmesh'
+abstract: Hexahedral mesh rendering with the Bevy engine
+keywords:
+  - bevy
+  - mesh
+  - hex-mesh
+  - hexahedral-mesh
+  - 3d-rendering
+  - rust
+license: MIT
+date-released: '2025-12-16'
