@@ -1,6 +1,6 @@
 # bevy-hexmesh
 
-[![Maintenance Level: Inactively Maintained](https://badgen.net/badge/Maintenance%20Level/Inactively%20Maintained?color=a4a61d)](https://gist.github.com/cheerfulstoic/d107229326a01ff0f333a1d3476e068d)
+[![Maintenance Level: Actively Developed](https://badgen.net/badge/Maintenance%20Level/Actively%20Developed?color=4c1)](https://gist.github.com/cheerfulstoic/d107229326a01ff0f333a1d3476e068d)
 
 Render the surface of `input.mesh` with [Bevy](https://bevy.org/)
 
