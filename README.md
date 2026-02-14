@@ -6,6 +6,11 @@ Render the surface of `input.mesh` with [Bevy](https://bevy.org/)
 
 ![](demo.gif)
 
+> [!NOTE]
+> The goal of this project is more to provide me an use case for applying many of Rust's features than to share reusable code.
+
+## Usage
+
 ```bash
 cargo run
 ```
