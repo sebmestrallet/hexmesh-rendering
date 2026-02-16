@@ -74,3 +74,9 @@ impl Sub<Vec3> for Vec3 {
         Vec3 { x: self.x - rhs.x, y: self.y - rhs.y, z: self.z - rhs.z}
     }
 }
+
+impl From<[f32;3]> for Vec3 {
+    fn from(array: [f32;3]) -> Self {
+        Vec3::new(array[0],array[1],array[2])
+    }
+}

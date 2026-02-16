@@ -50,6 +50,7 @@ impl TriangleMesh {
     }
 
     /// Checks that the vertex indices referenced inside `self.indices` are `self.edges` are valid (in the range [0:nb_vertices[ )
+    #[allow(unused)]
     pub fn sanity_check(&self) {
         assert!(self.indices.len() % 3 == 0);
         let nb_triangles = self.indices.len()/3;

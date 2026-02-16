@@ -1,5 +1,9 @@
+use core::assert;
+use core::convert::TryInto;
 use std::fs;
 use std::collections::HashMap;
+use std::process;
+use itertools::Itertools;
 use crate::vector::*;
 use crate::trianglemesh::TriangleMesh;
 
@@ -80,98 +84,110 @@ impl HexMesh {
         // ...
         // End
 
-        let mut points = Vec::new();
-        let mut cells = Vec::new();
+        let whole_file: String = fs::read_to_string(file_name).unwrap_or_else(|err| {
+            eprintln!("Error while reading input file: {err}");
+            process::exit(1);
+        });
 
-        enum ParsingState {
-            Header,
-            VerticesNumber,
-            Vertices,
-            SectionTransition,
-            CellsNumber,
-            Cells,
-            ParsingFinised
-        }
+        let mut line_iter = (1..).zip(whole_file.lines()); // iterator over line number and line content
 
-        let mut state: ParsingState = ParsingState::Header;
-        
-        if let Ok(whole_file) = fs::read_to_string(file_name) {
-            let lines = whole_file.split("\n");
-            for line in lines {
-                match state {
-                    ParsingState::Header => {
-                        if line == "Vertices" {
-                            state = ParsingState::VerticesNumber;
-                        }
-                        // else: ignore this line
-                        continue;
-                    },
-                    ParsingState::VerticesNumber => {
-                        let nb_vertices: usize = line.to_string().parse::<usize>().unwrap();
-                        points.reserve(nb_vertices); // preallocation
-                        println!("Found nb_vertices = {nb_vertices}");
-                        state = ParsingState::Vertices;
-                        continue;
-                    },
-                    ParsingState::Vertices => {
-                        if line == "" {
-                            state = ParsingState::SectionTransition;
-                        }
-                        else {
-                            let parts: Vec<&str> = line.split(" ").collect::<Vec<&str>>();
-                            assert!(parts.len() == 4); // 4 parts: x, y, z and the value 1
-                            let x: f32 = parts[0].to_string().parse::<f32>().unwrap();
-                            let y: f32 = parts[1].to_string().parse::<f32>().unwrap();
-                            let z: f32 = parts[2].to_string().parse::<f32>().unwrap();
-                            points.push(Vec3{ x: x, y: y, z: z });
-                        }
-                        continue;
-                    },
-                    ParsingState::SectionTransition => {
-                        if line == "Hexahedra" {
-                            state = ParsingState::CellsNumber;
-                        }
-                        // else: ignore this line
-                        continue;
-                    },
-                    ParsingState::CellsNumber => {
-                        let nb_cells: usize = line.to_string().parse::<usize>().unwrap();
-                        cells.reserve(nb_cells); // preallocation
-                        println!("Found nb_cells = {nb_cells}");
-                        state = ParsingState::Cells;
-                        continue;
-                    },
-                    ParsingState::Cells => {
-                        if line == "" {
-                            state = ParsingState::ParsingFinised;
-                        }
-                        else {
-                            let parts: Vec<&str> = line.split(" ").collect::<Vec<&str>>();
-                            assert!(parts.len() == 9); // 9 parts: v0 to v7 and the value 1
-                            let v0: usize = parts[0].to_string().parse::<usize>().unwrap();
-                            let v1: usize = parts[1].to_string().parse::<usize>().unwrap();
-                            let v2: usize = parts[2].to_string().parse::<usize>().unwrap();
-                            let v3: usize = parts[3].to_string().parse::<usize>().unwrap();
-                            let v4: usize = parts[4].to_string().parse::<usize>().unwrap();
-                            let v5: usize = parts[5].to_string().parse::<usize>().unwrap();
-                            let v6: usize = parts[6].to_string().parse::<usize>().unwrap();
-                            let v7: usize = parts[7].to_string().parse::<usize>().unwrap();
-                            cells.push(Hexahedron::new([v0-1,v1-1,v2-1,v3-1,v4-1,v5-1,v6-1,v7-1])); // 1-based to 0-based indices
-                        }
-                        continue;
-                    },
-                    ParsingState::ParsingFinised => {
-                        break;
+        // Check header
+
+        let expect_line = |numbered_line: Option<(usize,&str)>, expected: &str| {
+            match numbered_line {
+                Some((i,line)) => {
+                    if line != expected {
+                        eprintln!("Unexpected string at line {i}, expecting '{expected}', found '{line}'");
+                        process::exit(1);
                     }
+                },
+                None => {
+                    eprintln!("Unexpected end of file while reading input file");
+                    process::exit(1);
                 }
             }
-            println!("points.len() = {}", points.len());
-            println!("cells.len() = {}", cells.len());
-            return HexMesh { points: points, cells: cells, scaled_jacobians: None, cell_adjacency: Vec::new() }
-        }
-        else {
-            panic!("Unable to open file '{file_name}'");
-        }
+        };
+
+        expect_line(line_iter.next(),"MeshVersionFormatted 2");
+        expect_line(line_iter.next(),"Dimension 3");
+        expect_line(line_iter.next(),"");
+
+        // Parse vertices number
+
+        expect_line(line_iter.next(),"Vertices");
+
+        let nb_vertices: usize = line_iter
+            .next()
+            .expect("Unexpected end of file while reading input file")
+            .1 // ignore the line number, get the line content
+            .to_string()
+            .parse::<usize>()
+            .expect("The number of vertices in the input file is not an integer");
+
+        // Parse vertices definition
+
+        let process_vertex_def = |i: usize, line: &str| -> Vec3 {
+            line
+                .split(' ')
+                .into_iter()
+                .dropping_back(1) // ignore trailing '1'. note: dropping_back() available since itertools 0.14
+                .map(|x| x.to_string().parse::<f32>().unwrap_or_else(|e| {
+                    eprintln!("At line {i}, unable to parse '{x}' as f32: {e}");
+                    process::exit(1);
+                }))
+                .collect_array()
+                .expect("Unable to parse vertex definition '{line}' as an array of f32")
+                .into()
+        };
+
+        let points = line_iter
+            .by_ref()
+            .take_while(|(_,line)| !line.is_empty() )
+            .map(|(i,line)| process_vertex_def(i,line))
+            .collect::<Vec<Vec3>>();
+        assert!(points.len() == nb_vertices, "wrong declared number of vertices in input file");
+
+        // Parse hexahedra number
+
+        expect_line(line_iter.next(),"Hexahedra");
+
+        let nb_hexahedra: usize = line_iter
+            .next()
+            .expect("Unexpected end of file while reading input file")
+            .1 // ignore the line number, get the line content
+            .to_string()
+            .parse::<usize>()
+            .expect("The number of hexahedra in the input file is not an integer");
+
+        // Parse hexahedra definition
+
+        let process_hexahedra_def = |i: usize, line: &str| -> Hexahedron {
+            Hexahedron::new(
+            line
+                .split(' ')
+                .into_iter()
+                .dropping_back(1) // ignore trailing '1'. note: dropping_back() available since itertools 0.14
+                .map(|x| x.to_string().parse::<usize>().unwrap_or_else(|e| {
+                    eprintln!("At line {i}, unable to parse '{x}' as usize: {e}");
+                    process::exit(1);
+                })-1) // 1-based to 0-based indices
+                .collect_array()
+                .expect("Unable to parse vertex definition '{line}' as an array of f32")
+            )
+        };
+
+        let cells = line_iter
+            .by_ref()
+            .take_while(|(_,line)| !line.is_empty() )
+            .map(|(i,line)| process_hexahedra_def(i,line))
+            .collect::<Vec<Hexahedron>>();
+        assert!(cells.len() == nb_hexahedra, "wrong declared number of hexahedra in input file");
+
+        expect_line(line_iter.next(),"End");
+
+        assert!(line_iter.next().is_none(), "end of file expected");
+        
+        HexMesh { points: points, cells: cells, scaled_jacobians: None, cell_adjacency: Vec::new() }
     }
 
     pub fn compute_scaled_jacobian(&mut self) {
