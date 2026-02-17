@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
-use std::f32;
+use std::{f32, process};
 use std::fs::File;
 use std::io::prelude::*;
+use itertools::Itertools;
 use crate::wireframe::WireframeMesh;
 
 /// A triangle mesh, with per-vertex uv coordinates, and edges
@@ -27,25 +28,35 @@ impl TriangleMesh {
         // usemtl Material_0
         // f <v0> <v1> <v2>
         // ...
-        let mut file = File::create(file_name).unwrap();
-        for vertex_index in 0..self.positions.len() {
-            let current_vertex = self.positions.get(vertex_index).unwrap();
-            let _ = file.write_all(format!("v {} {} {}\n",current_vertex[0], current_vertex[1], current_vertex[2]).as_bytes());
-        }
-        let _ = file.write_all(b"usemtl Material_0\n");
-        let mut v0: u32;
-        let mut v1: u32;
-        let mut v2: u32;
-        assert!(self.indices.len() % 3 ==0);
-        for triangle_index in 0..self.indices.len()/3 {
-            v0 = *self.indices.get(triangle_index*3+0).unwrap();
-            v1 = *self.indices.get(triangle_index*3+1).unwrap();
-            v2 = *self.indices.get(triangle_index*3+2).unwrap();
-            let _ = file.write_all(format!("f {} {} {}\n", v0+1, v1+1, v2+1).as_bytes()); // /!\ 0-based to 1-based indices
-        }
-        for edge in self.edges.iter() {
-            let _ = file.write_all(format!("l {} {}\n", edge[0]+1, edge[1]+1).as_bytes()); // /!\ 0-based to 1-based indices
-        }
+
+        let mut file = File::create(file_name).unwrap_or_else(|e| {
+            eprintln!("Unable to create file '{file_name}': {e}");
+            process::exit(1);
+        });
+
+        self.positions
+            .iter()
+            .for_each(|coordinates: &[f32;3]| {
+                file.write_all(format!("v {} {} {}\n",coordinates[0], coordinates[1], coordinates[2]).as_bytes());
+            });
+        
+        file.write_all(b"usemtl Material_0\n");
+
+        assert!(self.indices.len() % 3 == 0, "The number of indices is not a multiple of 3, expecting triangle definitions");
+        self.indices
+            .iter()
+            .chunks(3)
+            .into_iter()
+            .for_each(|mut vertex_index: itertools::Chunk<'_, std::slice::Iter<'_, u32>>| {
+                file.write_all(format!("f {} {} {}\n", vertex_index.next().unwrap()+1, vertex_index.next().unwrap()+1, vertex_index.next().unwrap()+1).as_bytes()); // /!\ 0-based to 1-based indices
+            });
+
+        self.edges
+            .iter()
+            .for_each(|edge: &[u32;2]| {
+                file.write_all(format!("l {} {}\n", edge[0]+1, edge[1]+1).as_bytes()); // /!\ 0-based to 1-based indices
+            });
+        
         println!("{file_name} written");
     }
 

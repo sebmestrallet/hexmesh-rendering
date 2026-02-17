@@ -18,6 +18,7 @@ mod vector;
 mod hexmesh;
 mod trianglemesh;
 mod wireframe;
+use std::process;
 
 static INPUT_FILE: &str = "input.mesh"; // must be a hexmesh in MEDIT format
 
@@ -77,6 +78,9 @@ fn startup(
     let (mut trianglemesh,per_triangle_scaled_jacobian): (TriangleMesh, Vec<f32>) = mesh.triangulate_surface();
     trianglemesh.remove_isolated_vertices();
 
+    trianglemesh.write_obj("triangulated.obj");
+    process::exit(0);
+    
     // extrat a wireframe mesh (edges of the quad mesh) from the edges stored in the TriangleMesh struct
     let wireframe_mesh = trianglemesh.create_wireframe_mesh();
 
