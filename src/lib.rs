@@ -82,7 +82,6 @@ fn startup(
         eprintln!("Application error: {e}");
         process::exit(1);
     }
-    process::exit(0);
 
     // extrat a wireframe mesh (edges of the quad mesh) from the edges stored in the TriangleMesh struct
     let wireframe_mesh = trianglemesh.create_wireframe_mesh();

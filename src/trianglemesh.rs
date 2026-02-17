@@ -246,11 +246,12 @@ impl TriangleMesh {
     pub fn create_wireframe_mesh(&self) -> WireframeMesh {
         let mut wireframe_mesh: WireframeMesh = WireframeMesh::new();
         wireframe_mesh.vertices = self.positions.clone();
-        wireframe_mesh.edges.reserve(self.edges.len() * 2);
-        for edge in self.edges.iter() {
-            wireframe_mesh.edges.push(edge[0]);
-            wireframe_mesh.edges.push(edge[1]);
-        }
+        // Iterate over each combination of (edge in self.edges) and [0,1] -> [first edge vertex 0, first edge vertex 1, second edge vertex 0...]
+        wireframe_mesh.edges = self.edges
+            .iter()
+            .cartesian_product(0..2)
+            .map(|(edge,i)| edge[i])
+            .collect();
         assert!(wireframe_mesh.edges.len() == self.edges.len() * 2);
         wireframe_mesh
     }
