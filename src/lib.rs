@@ -78,9 +78,12 @@ fn startup(
     let (mut trianglemesh,per_triangle_scaled_jacobian): (TriangleMesh, Vec<f32>) = mesh.triangulate_surface();
     trianglemesh.remove_isolated_vertices();
 
-    trianglemesh.write_obj("triangulated.obj");
+    if let Err(e) = trianglemesh.write_obj("triangulated.obj") {
+        eprintln!("Application error: {e}");
+        process::exit(1);
+    }
     process::exit(0);
-    
+
     // extrat a wireframe mesh (edges of the quad mesh) from the edges stored in the TriangleMesh struct
     let wireframe_mesh = trianglemesh.create_wireframe_mesh();
 

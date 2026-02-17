@@ -1,5 +1,7 @@
+use core::error::Error;
+use core::result::Result;
 use std::collections::{HashMap, HashSet};
-use std::{f32, process};
+use std::f32;
 use std::fs::File;
 use std::io::prelude::*;
 use itertools::Itertools;
@@ -20,7 +22,7 @@ impl TriangleMesh {
 
     /// Export as Wavefront .obj file. Triangles & edges are written, but not per-vertex uv coordinates
     #[allow(unused)]
-    pub fn write_obj(&self, file_name: &str) {
+    pub fn write_obj(&self, file_name: &str) -> Result<(),Box<dyn Error>> {
         // Wavefront .obj file
         // ---
         // v <x> <y> <z>
@@ -29,10 +31,7 @@ impl TriangleMesh {
         // f <v0> <v1> <v2>
         // ...
 
-        let mut file = File::create(file_name).unwrap_or_else(|e| {
-            eprintln!("Unable to create file '{file_name}': {e}");
-            process::exit(1);
-        });
+        let mut file = File::create(file_name)?;
 
         self.positions
             .iter()
@@ -47,8 +46,14 @@ impl TriangleMesh {
             .iter()
             .chunks(3)
             .into_iter()
-            .for_each(|mut vertex_index: itertools::Chunk<'_, std::slice::Iter<'_, u32>>| {
-                file.write_all(format!("f {} {} {}\n", vertex_index.next().unwrap()+1, vertex_index.next().unwrap()+1, vertex_index.next().unwrap()+1).as_bytes()); // /!\ 0-based to 1-based indices
+            .enumerate()
+            .for_each(|(i,mut vertex_index)| {
+                file.write_all(format!(
+                    "f {} {} {}\n",
+                    vertex_index.next().expect(&format!("Unable to access 1st vertex index of triangle {i}"))+1,
+                    vertex_index.next().expect(&format!("Unable to access 2nd vertex index of triangle {i}"))+1,
+                    vertex_index.next().expect(&format!("Unable to access 3rd vertex index of triangle {i}"))+1,
+                ).as_bytes()); // /!\ 0-based to 1-based indices
             });
 
         self.edges
@@ -58,6 +63,7 @@ impl TriangleMesh {
             });
         
         println!("{file_name} written");
+        Ok(())
     }
 
     /// Checks that the vertex indices referenced inside `self.indices` are `self.edges` are valid (in the range [0:nb_vertices[ )
