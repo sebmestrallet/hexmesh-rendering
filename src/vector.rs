@@ -3,7 +3,7 @@ use crate::matrix::det2x2;
 
 /// A 3D vector
 /// TODO use a [f32;3]?
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,

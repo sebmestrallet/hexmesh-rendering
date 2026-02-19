@@ -7,6 +7,7 @@ use itertools::Itertools;
 use crate::vector::*;
 use crate::trianglemesh::TriangleMesh;
 
+#[derive(Debug, PartialEq)]
 pub struct Hexahedron {
     pub vertices: [usize; 8], // 8 indices, for 8 vertices /!\ 0-based indices
 }
@@ -200,7 +201,7 @@ impl HexMesh {
                     let which_corner = Hexahedron::CORNER_SPLITING[hex_corner][i];
                     let vertex_index = self.cells.get(hex_index).unwrap().vertices[which_corner];
                     v[i] = *self.points.get(vertex_index).unwrap_or_else(|| {
-                            panic!("Cannot access `points` vec at {vertex_index}");
+                            panic!("Cannot access `points` vec at {}. Hexmesh has {} points",vertex_index,self.points.len());
                         }
                     ); // get 3D coordinates of vertex at vertex_index
                 }
@@ -367,5 +368,48 @@ impl HexMesh {
         assert!(trianglemesh.indices.len() % 3 == 0);
         println!("End of triangulate_surface()");
         (trianglemesh,per_triangle_scaled_jacobian)
+    }
+}
+
+mod tests {
+
+    use super::*;
+    use std::path::PathBuf;
+    use core::assert_eq;
+
+    #[test]
+    fn read_from_medit_format() {
+        // Thanks Shepmaster https://stackoverflow.com/a/30004252
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.push("tests");
+        path.push("3-hexa.mesh");
+        let mesh = HexMesh::from_medit(path.into_os_string().to_str().unwrap());
+
+        assert_eq!(mesh.points.len(),16);
+        assert_eq!(mesh.cells.len(),3);
+
+        assert_eq!(mesh.points[0],Vec3::new(0.0,0.0,0.0));
+        assert_eq!(mesh.points[1],Vec3::new(1.0,0.0,0.0));
+        assert_eq!(mesh.points[2],Vec3::new(2.0,0.0,0.0));
+        assert_eq!(mesh.points[3],Vec3::new(3.0,0.0,0.0));
+
+        assert_eq!(mesh.points[4],Vec3::new(0.0,1.0,0.0));
+        assert_eq!(mesh.points[5],Vec3::new(1.0,1.0,0.0));
+        assert_eq!(mesh.points[6],Vec3::new(2.0,1.0,0.0));
+        assert_eq!(mesh.points[7],Vec3::new(3.0,1.0,0.0));
+
+        assert_eq!(mesh.points[8], Vec3::new(0.0,0.0,1.5));
+        assert_eq!(mesh.points[9], Vec3::new(1.0,0.0,0.5));
+        assert_eq!(mesh.points[10],Vec3::new(2.0,0.0,1.0));
+        assert_eq!(mesh.points[11],Vec3::new(3.0,0.0,1.0));
+
+        assert_eq!(mesh.points[12],Vec3::new(0.0,1.0,0.1));
+        assert_eq!(mesh.points[13],Vec3::new(1.0,1.0,1.0));
+        assert_eq!(mesh.points[14],Vec3::new(2.0,1.0,1.0));
+        assert_eq!(mesh.points[15],Vec3::new(3.0,1.0,1.0));
+
+        assert_eq!(mesh.cells[0],Hexahedron::new([0,8,9,1,4,12,13,5]));
+        assert_eq!(mesh.cells[1],Hexahedron::new([1,9,10,2,5,13,14,6]));
+        assert_eq!(mesh.cells[2],Hexahedron::new([2,10,11,3,6,14,15,7]));
     }
 }
